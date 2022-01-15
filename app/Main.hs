@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
 -- hitomezashi patters can be interpreted as binary, so the pattern '- - - ' -> '101010'
 -- it can also be interpreted using opposite rules, like odd and even numbers, and vowels and constanasnts
 -- they can be represented as rulesets
@@ -9,137 +10,182 @@
 
 module Main where
 
-import qualified Graphics.Image as I
-import Data.List
 import Data.Char
-import System.Environment
-import System.IO
-import Control.Applicative
+import Data.List
+import Data.Data
+import Data.ByteString as B
+import qualified Graphics.Image as I
+import Options.Applicative
 
-type Pattern = I.Image I.VU I.YA Double
+type Image = I.Image I.VU I.YA Double
 
 type Size = Int
+
 type Len = Int
+
 type Bit = Int
 
 data Orientation = Horizontal | Vertical deriving (Show, Eq)
 
-concatLR, concatTB :: [Pattern] -> Pattern
+concatLR, concatTB :: [Image] -> Image
 concatLR = foldl1 I.leftToRight
 concatTB = foldl1 I.topToBottom
 
 -- S CANNOT BE SMALLER THAN 3
 
-genLn :: Orientation -> Size -> Len -> Bit -> Pattern
-genLn Horizontal s len i = I.fromListsR I.VU $ if i == 1
-                        then [take len $ cycle $ replicate s blk ++ replicate sp trns]
-                    else if i == 0
-                        then [take len $ trns: if last zlist == trns then init zlist else zlist] -- 0 lines have an exra space at the begin and end
-                    else     [take len $ cycle $ replicate sp trns ++ replicate sp trns]
-        where
-            blk = I.PixelYA 0 1     -- black
-            trns = I.PixelYA 0 0    -- transparent
-            sp = s `mod` 3 + 1     -- spaces
-            zlist = take len $ cycle $ replicate sp trns ++ replicate s blk
-genLn Vertical s len i = I.transpose $ I.fromListsR I.VU $ if i == 1
-                        then [take len $ cycle $ replicate s blk ++ replicate sp trns]
-                    else if i == 0
-                        then [take len $ trns: if last zlist == trns then init zlist else zlist] -- 0 lines have an exra space at the begin and end
-                    else     [take len $ cycle $ replicate sp trns ++ replicate sp trns]
-        where
-            blk = I.PixelYA 0 1     -- black
-            trns = I.PixelYA 0 0    -- transparent
-            sp = s `mod` 3 + 1     -- spaces
-            zlist = take len $ cycle $ replicate sp trns ++ replicate s blk
+genLn :: Orientation -> Size -> Len -> Bit -> Image
+genLn Horizontal s len i =
+  I.fromListsR I.VU $
+    if i == 1
+      then [take len $ cycle $ replicate s blk ++ replicate sp trns]
+      else
+        if i == 0
+          then [take len $ trns : if last zlist == trns then init zlist else zlist] -- 0 lines have an exra space at the begin and end
+          else [take len $ cycle $ replicate sp trns ++ replicate sp trns]
+  where
+    blk = I.PixelYA 0 1 -- black
+    trns = I.PixelYA 0 0 -- transparent
+    sp = s `mod` 3 + 1 -- spaces
+    zlist = take len $ cycle $ replicate sp trns ++ replicate s blk
+genLn Vertical s len i =
+  I.transpose $
+    I.fromListsR I.VU $
+      if i == 1
+        then [take len $ cycle $ replicate s blk ++ replicate sp trns]
+        else
+          if i == 0
+            then [take len $ trns : if last zlist == trns then init zlist else zlist] -- 0 lines have an exra space at the begin and end
+            else [take len $ cycle $ replicate sp trns ++ replicate sp trns]
+  where
+    blk = I.PixelYA 0 1 -- black
+    trns = I.PixelYA 0 0 -- transparent
+    sp = s `mod` 3 + 1 -- spaces
+    zlist = take len $ cycle $ replicate sp trns ++ replicate s blk
 
-genTop, genLft :: Size -> Len -> [Bit] -> Pattern
-genTop s len xs = concatLR $ map (genLn Vertical s len) (intercalate (replicate sp 2) (map (:[]) xs))
-    where sp = s `mod` 3 + 1
-
-genLft s len xs = concatTB $ map (genLn Horizontal s len) (intercalate (replicate sp 2) (map (:[]) xs))
-    where sp = s `mod` 3 + 1
-
-writeLft, writeTop :: Pattern -> IO ()
-writeLft = I.writeImage "images/lft.png"
-writeTop = I.writeImage "images/top.png"
-
-writeHitomezashi :: String -> Size -> [[Bit]]-> IO ()
-writeHitomezashi fileName s xs = I.writeImage ("images/" ++ fileName ++ ".png") hitomezashi
-    where
-        hitomezashi = genLft s x (head xs) + genTop s y (concat $ tail xs)
-        y = length (head xs) * (s - 1) - (s - 2) -- get dims from ratio
-        x = length (concat $ tail xs) * (s - 1) - (s - 2)
+genTop, genLft :: Size -> Len -> [Bit] -> Image
+genTop s len xs = concatLR $ map (genLn Vertical s len) (intercalate (replicate sp 2) (map (: []) xs))
+  where
+    sp = s `mod` 3 + 1
+genLft s len xs = concatTB $ map (genLn Horizontal s len) (intercalate (replicate sp 2) (map (: []) xs))
+  where
+    sp = s `mod` 3 + 1
 
 swap :: Eq a => a -> a -> [a] -> [a]
 swap a b = map (\x -> if x == a then b else if x == b then a else x)
 
 invert :: [[Bit]] -> [[Bit]]
-invert [a,b] = [swap 0 1 a, swap 0 1 b]
+invert [a, b] = [swap 0 1 a, swap 0 1 b]
 
 toBinary :: [String] -> [[Bit]]
-toBinary [a,b] = [bin a, bin b]
-    where
-        bin x = concatMap (reverse . binary) (concatMap (map ord) (words x))
+toBinary [a, b] = [bin a, bin b]
+  where
+    bin x = concatMap (reverse . binary) (concatMap (map ord) (words x))
 
-binary :: Int -> [Int] 
+binary :: Int -> [Int]
 binary 0 = [0]
-binary n = let (q,r) = n `divMod` 2 in r : binary q
+binary n = let (q, r) = n `divMod` 2 in r : binary q
 
+writeHitomezashi :: String -> Size -> [[Bit]] -> IO ()
+writeHitomezashi fileName s xs = I.writeImage fileName hitomezashi
+  where
+    hitomezashi = genLft s x (head xs) + genTop s y (concat $ tail xs)
+    y = length (head xs) * (s - 1) - (s - 2) -- get dims from ratio
+    x = length (concat $ tail xs) * (s - 1) - (s - 2)
+    
 -- main
 
-data Options = Options {
-      optHelp :: Bool
-    , optOutput :: String
-    , optInput :: String 
-    , optPattern :: [[Bit]]
-    , optSize :: Int 
-    , optInvert :: Bool 
-    , optEncode :: [String]  
-}
+data Options = Options
+  { optOutput :: String,
+    optSize :: Int,
+    optInvert :: Bool,
+    optInput :: Input
+  }
 
-defaultOptions = Options {
-      optHelp = False 
-    , optOutput = "Hitomezashi Pattern.png"
-    , optInput = ""
-    , optPattern = [[]]
-    , optSize = 4
-    , optInvert = False 
-    , optEncode = [""]
-}
+data Input = File String | Pattern [[Int]] | Encode [String] deriving (Typeable, Data)
 
-help :: IO ()
-help = do
-        putStrLn "Hitomezashi Maker"
-        putStrLn "=================="
-        putStrLn "Make various patterns and even encode messages!"
-        putStrLn ""
-        putStrLn "Usage:"
-        putStrLn "-------"
-        putStrLn "  -h : Display this help info"
-        putStrLn "  -o : Specify the output file"
-        putStrLn "  -f : Specify the input file (if available)"
-        putStrLn ""
-        putStrLn "  -H : Specify hitomezashi pattern"
-        putStrLn "  -s : Specify the size of the lines (3,4 or 5, default 4)"
-        putStrLn "  -i : Invert the hitomezashi"
-        putStrLn "  -e : Encode a message in binary."
-        putStrLn "  -d : !!! NOT IMPLEMENTED !!! Decode a message"
-        putStrLn ""
-        putStrLn "Hitomezashi Pattern Format:"
-        putStrLn "----------------------------"
-        putStrLn "  Patterns are made with a series of alternating lines starting from the left and top,"
-        putStrLn "  and are represented by 1 and 0. 1 starts with a line, whereas 0 dosen't."
-        putStrLn ""
-        putStrLn "  eg. 1: |─ ─ ─ ─ ─|"
-        putStrLn "      0: | ─ ─ ─ ─ |"
-        putStrLn ""
-        putStrLn "  To make a pattern, put a series of these into [], one for the left and one for the top"
-        putStrLn ""
-        putStrLn "  eg. [[1,0,1,0,1],[1,0,1,0,1]]  ( [[left pattern],[top pattern]] )"
-        putStrLn ""
-        putStrLn "  You can put this in a file and specify it with the -f option, or use it directly with the -H option"
-        putStrLn "  or even encode a message with -e option ( [msgLeft,msgTop] )."
-        putStrLn ""
-        putStrLn "  Whatever it is you do, dont forget to have fun!"
+getInputVal :: Input -> a
+getInputVal (File n) = n
+getInputVal (Pattern n) = n
+getInputVal (Encode n) = n
 
-main = do putStrLn "Hello! :)"
+fileInput :: Parser Input
+fileInput = File <$> strOption
+             ( long "input"
+            <> short 'f'
+            <> help "Specify's the input file with the pattern"
+            <> metavar "FILE")
+
+patternInput :: Parser Input
+patternInput = Pattern <$> option patternReader
+                 ( long "pattern"
+                <> short 'p'
+                <> help "Specify's the pattern"
+                <> metavar "PATTERN")
+
+encodeInput :: Parser Input
+encodeInput = Encode <$> option strListReader
+                 ( long "encode"
+                <> short 'e'
+                <> help "Encode a message in binary"
+                <> metavar "STRING")
+
+input :: Parser Input
+input = fileInput <|> patternInput <|> encodeInput
+
+patternReader :: ReadM [[Int]]
+patternReader = do
+    o <- str
+    return (read o :: [[Int]])
+
+strListReader :: ReadM [String]
+strListReader = do
+    o <- str
+    return (read o :: [String])
+
+options :: Parser Options
+options =
+  Options
+    <$> strOption
+      ( long "output"
+          <> short 'o'
+          <> help "Specify's the output file (png)"
+          <> metavar "FILE"
+          <> value "out.png"
+      )
+    <*> option auto
+      ( long "size"
+          <> short 's'
+          <> help "The size of the lines (3,4 or 5)"
+          <> metavar "NUMBER"
+          <> value 4
+      )
+    <*> switch
+      ( long "invert"
+          <> short 'i'
+          <> help "Inverts the pattern (i.e. flips 0's to 1's and vice versa)"
+      )
+    <*> input
+
+opts :: ParserInfo Options
+opts = info (options <**> helper) (
+  fullDesc
+  <> progDesc "Make various patterns and even encode messages!"
+  <> header "Hitomezashi Maker"
+  <> footer "Hitomezashi Pattern Format:\n\
+  \----------------------------\n\
+  \Patterns are made with a series of alternating lines starting from the left and top,\n\
+  \and are represented by 1 and 0. 1 starts with a line, whereas 0 dosen't.\n\n\
+  \  eg. 1: |─ ─ ─ ─ ─|\n\
+  \      0: | ─ ─ ─ ─ |\n\
+  \To make a pattern, put a series of these into [], one for the left and one for the top\n\n\
+  \eg. [[1,0,1,0,1],[1,0,1,0,1]]  ( [[left pattern],[top pattern]] )\n\n\
+  \You can put this in a file and specify it with the -f option, or use it directly with the -H option\
+  \or even encode a message with -e option ( [msgLeft,msgTop] ).\n\n\
+  \Whatever it is you do, dont forget to have fun!\n"
+  )
+
+writeHitomezashiWrapper :: Options -> IO ()
+writeHitomezashiWrapper Options{ .. }
+  | toConstr optInput == toConstr Pattern = writeHitomezashi optOutput optSize (getInputVal t)
+  | toConstr optInput == toConstr Encode  = writeHitomezashi optOutput optSize (toBinary $ getInputVal t)
+  | toConstr optInput == toConstr File    = 

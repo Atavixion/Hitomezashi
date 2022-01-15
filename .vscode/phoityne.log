@@ -1,0 +1,2 @@
+2022-01-15 22:22:21.243924450000 [773566(ThreadId 11)] ERROR APP - stack: runProcess: exec: does not exist (No such file or directory)
+2022-01-15 22:22:38.993080436000 [773920(ThreadId 11)] ERROR APP - start debugging failed. user error (ExecResult not found.) : Left "user error (ExecResult not found.)"
