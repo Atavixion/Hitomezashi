@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
+
 -- hitomezashi patters can be interpreted as binary, so the pattern '- - - ' -> '101010'
 -- it can also be interpreted using opposite rules, like odd and even numbers, and vowels and constanasnts
 -- they can be represented as rulesets
@@ -13,9 +14,11 @@ module Main where
 import Data.Char
 import Data.List
 import Data.Data
-import Data.ByteString as B
+import qualified Text.PrettyPrint.ANSI.Leijen as L
+import qualified Data.ByteString.Char8 as B
 import qualified Graphics.Image as I
 import Options.Applicative
+-- import Criterion.Main
 
 type Image = I.Image I.VU I.YA Double
 
@@ -91,7 +94,7 @@ writeHitomezashi fileName s xs = I.writeImage fileName hitomezashi
     hitomezashi = genLft s x (head xs) + genTop s y (concat $ tail xs)
     y = length (head xs) * (s - 1) - (s - 2) -- get dims from ratio
     x = length (concat $ tail xs) * (s - 1) - (s - 2)
-    
+
 -- main
 
 data Options = Options
@@ -103,10 +106,14 @@ data Options = Options
 
 data Input = File String | Pattern [[Int]] | Encode [String] deriving (Typeable, Data)
 
-getInputVal :: Input -> a
-getInputVal (File n) = n
-getInputVal (Pattern n) = n
-getInputVal (Encode n) = n
+getFileVal :: Input -> String
+getFileVal (File n) = n
+
+getPatVal :: Input -> [[Int]]
+getPatVal (Pattern n) = n
+
+getEncVal :: Input -> [String]
+getEncVal (Encode n) = n
 
 fileInput :: Parser Input
 fileInput = File <$> strOption
@@ -171,21 +178,61 @@ opts = info (options <**> helper) (
   fullDesc
   <> progDesc "Make various patterns and even encode messages!"
   <> header "Hitomezashi Maker"
-  <> footer "Hitomezashi Pattern Format:\n\
+  <> footerDoc (Just (L.text "Hitomezashi Pattern Format:\n\
   \----------------------------\n\
   \Patterns are made with a series of alternating lines starting from the left and top,\n\
   \and are represented by 1 and 0. 1 starts with a line, whereas 0 dosen't.\n\n\
   \  eg. 1: |─ ─ ─ ─ ─|\n\
-  \      0: | ─ ─ ─ ─ |\n\
+  \      0: | ─ ─ ─ ─ |\n\n\
   \To make a pattern, put a series of these into [], one for the left and one for the top\n\n\
   \eg. [[1,0,1,0,1],[1,0,1,0,1]]  ( [[left pattern],[top pattern]] )\n\n\
   \You can put this in a file and specify it with the -f option, or use it directly with the -H option\
   \or even encode a message with -e option ( [msgLeft,msgTop] ).\n\n\
   \Whatever it is you do, dont forget to have fun!\n"
-  )
+  )))
 
 writeHitomezashiWrapper :: Options -> IO ()
 writeHitomezashiWrapper Options{ .. }
-  | toConstr optInput == toConstr Pattern = writeHitomezashi optOutput optSize (getInputVal t)
-  | toConstr optInput == toConstr Encode  = writeHitomezashi optOutput optSize (toBinary $ getInputVal t)
-  | toConstr optInput == toConstr File    = 
+  | show (toConstr optInput) == "Pattern" = writeHitomezashi optOutput optSize (inv $ getPatVal optInput)
+  | show (toConstr optInput) == "Encode" = writeHitomezashi optOutput optSize (inv . toBinary $ getEncVal optInput)
+  | show (toConstr optInput) == "File" = list >>= writeHitomezashi optOutput optSize . inv
+  where
+    inv x = if optInvert then invert x else x
+    list = do
+      let file = getFileVal optInput
+          toList x = read (init x) :: [[Int]]
+      x <- B.readFile file
+      return (toList $ B.unpack x)
+
+main :: IO ()
+main = writeHitomezashiWrapper =<< execParser opts
+
+-- main = defaultMain [
+--   bgroup "Size 3" [
+--     bgroup "Normal" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "out.png" 3 [[1,0,1,0,1],[0,1,0,1,0]]),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "out1.png" 3 (toBinary ["Lorem","ipsum"]))
+--     ],
+--     bgroup "Inverted" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "out2.png" 3 (invert [[1,0,1,0,1],[0,1,0,1,0]])),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "out3.png" 3 (invert $ toBinary ["Lorem","ipsum"]))
+--     ]],
+--   bgroup "Size 4" [
+--     bgroup "Normal" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "out4.png" 4 [[1,0,1,0,1],[0,1,0,1,0]]),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "out5.png" 4 (toBinary ["Lorem","ipsum"]))
+--     ],
+--     bgroup "Inverted" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "out6.png" 4 (invert [[1,0,1,0,1],[0,1,0,1,0]])),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "out7.png" 4 (invert $ toBinary ["Lorem","ipsum"]))
+--     ]],
+--   bgroup "Size 5" [
+--     bgroup "Normal" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "out8.png" 5 [[1,0,1,0,1],[0,1,0,1,0]]),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "out9.png" 5 (toBinary ["Lorem","ipsum"]))
+--     ],
+--     bgroup "Inverted" [
+--       bench "[[1,0,1,0,1],[0,1,0,1,0]]" $ nfIO (writeHitomezashi "outA.png" 5 (invert [[1,0,1,0,1],[0,1,0,1,0]])),
+--       bench "[\"Lorem\",\"Ipsum\"]" $ nfIO (writeHitomezashi "outB.png" 5 (invert $ toBinary ["Lorem","ipsum"]))
+--     ]]
+--   ]

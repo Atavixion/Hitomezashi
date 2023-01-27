@@ -10,6 +10,16 @@
   (major1) == 0 && (major2) <  1 || \
   (major1) == 0 && (major2) == 1 && (minor) <= 0)
 #endif /* MIN_VERSION_hitomezashi */
+/* package ansi-wl-pprint-0.6.9 */
+#ifndef VERSION_ansi_wl_pprint
+#define VERSION_ansi_wl_pprint "0.6.9"
+#endif /* VERSION_ansi_wl_pprint */
+#ifndef MIN_VERSION_ansi_wl_pprint
+#define MIN_VERSION_ansi_wl_pprint(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  6 || \
+  (major1) == 0 && (major2) == 6 && (minor) <= 9)
+#endif /* MIN_VERSION_ansi_wl_pprint */
 /* package base-4.14.3.0 */
 #ifndef VERSION_base
 #define VERSION_base "4.14.3.0"
@@ -20,6 +30,16 @@
   (major1) == 4 && (major2) <  14 || \
   (major1) == 4 && (major2) == 14 && (minor) <= 3)
 #endif /* MIN_VERSION_base */
+/* package bytestring-0.10.12.0 */
+#ifndef VERSION_bytestring
+#define VERSION_bytestring "0.10.12.0"
+#endif /* VERSION_bytestring */
+#ifndef MIN_VERSION_bytestring
+#define MIN_VERSION_bytestring(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  10 || \
+  (major1) == 0 && (major2) == 10 && (minor) <= 12)
+#endif /* MIN_VERSION_bytestring */
 /* package hip-1.5.6.0 */
 #ifndef VERSION_hip
 #define VERSION_hip "1.5.6.0"
@@ -30,6 +50,16 @@
   (major1) == 1 && (major2) <  5 || \
   (major1) == 1 && (major2) == 5 && (minor) <= 6)
 #endif /* MIN_VERSION_hip */
+/* package optparse-applicative-0.16.1.0 */
+#ifndef VERSION_optparse_applicative
+#define VERSION_optparse_applicative "0.16.1.0"
+#endif /* VERSION_optparse_applicative */
+#ifndef MIN_VERSION_optparse_applicative
+#define MIN_VERSION_optparse_applicative(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  16 || \
+  (major1) == 0 && (major2) == 16 && (minor) <= 1)
+#endif /* MIN_VERSION_optparse_applicative */
 
 /* tool gcc-11.1.0 */
 #ifndef TOOL_VERSION_gcc
