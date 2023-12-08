@@ -1,36 +1,79 @@
-cabal-version:      2.4
-name:               hitomezashi
-version:            0.1.0.0
+cabal-version: 2.2
 
--- A short (one-line) description of the package.
--- synopsis:
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
 
--- A longer description of the package.
--- description:
+name:           hitomezashi
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/atavixion/hitomezashi#readme>
+homepage:       https://github.com/atavixion/hitomezashi#readme
+bug-reports:    https://github.com/atavixion/hitomezashi/issues
+author:         Julian Mac Kenzie
+maintainer:     jukiangm@gmail.com
+copyright:      2023 Julian Mac Kenzie
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
 
--- A URL where users can report bugs.
--- bug-reports:
+source-repository head
+  type: git
+  location: https://github.com/atavixion/hitomezashi
 
--- The license under which the package is released.
--- license:
-author:             Julian Mac Kenzie
-maintainer:         jukiangm@gmail.com
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_hitomezashi
+  autogen-modules:
+      Paths_hitomezashi
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded
+  build-depends:
+      ansi-wl-pprint
+    , base >=4.7 && <5
+    , bytestring
+    , hip
+    , optparse-applicative
+  default-language: Haskell2010
 
--- A copyright notice.
--- copyright:
--- category:
-extra-source-files: CHANGELOG.md
+executable hitomezashi-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_hitomezashi
+  autogen-modules:
+      Paths_hitomezashi
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      ansi-wl-pprint
+    , base >=4.7 && <5
+    , bytestring
+    , hip
+    , hitomezashi
+    , optparse-applicative
+  default-language: Haskell2010
 
-executable hitomezashi
-    main-is:          Main.hs
-
-    -- Modules included in this executable, other than Main.
-    -- other-modules:
-
-    -- LANGUAGE extensions used by modules in this package.
-    -- other-extensions:
-    build-depends:
-        base , hip , optparse-applicative , bytestring , ansi-wl-pprint
-    hs-source-dirs:   app
-    default-language: Haskell2010
-    ghc-options:      -threaded
+test-suite hitomezashi-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_hitomezashi
+  autogen-modules:
+      Paths_hitomezashi
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      ansi-wl-pprint
+    , base >=4.7 && <5
+    , bytestring
+    , hip
+    , hitomezashi
+    , optparse-applicative
+  default-language: Haskell2010

@@ -1,0 +1,6 @@
+
+    build-depends:
+        base , hip , optparse-applicative , bytestring , ansi-wl-pprint
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -threaded

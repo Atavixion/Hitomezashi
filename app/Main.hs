@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveDataTypeable, RecordWildCards #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- hitomezashi patters can be interpreted as binary, so the pattern '- - - ' -> '101010'
 -- it can also be interpreted using opposite rules, like odd and even numbers, and vowels and constanasnts
@@ -11,13 +12,14 @@
 
 module Main where
 
-import Data.Char
-import Data.List
-import Data.Data
-import qualified Text.PrettyPrint.ANSI.Leijen as L
 import qualified Data.ByteString.Char8 as B
+import Data.Char
+import Data.Data
+import Data.List
 import qualified Graphics.Image as I
 import Options.Applicative
+import qualified Text.PrettyPrint.ANSI.Leijen as L
+
 -- import Criterion.Main
 
 type Image = I.Image I.VU I.YA Double
@@ -73,7 +75,7 @@ genLft s len xs = concatTB $ map (genLn Horizontal s len) (intercalate (replicat
   where
     sp = s `mod` 3 + 1
 
-swap :: Eq a => a -> a -> [a] -> [a]
+swap :: (Eq a) => a -> a -> [a] -> [a]
 swap a b = map (\x -> if x == a then b else if x == b then a else x)
 
 invert :: [[Bit]] -> [[Bit]]
@@ -116,38 +118,49 @@ getEncVal :: Input -> [String]
 getEncVal (Encode n) = n
 
 fileInput :: Parser Input
-fileInput = File <$> strOption
-             ( long "input"
-            <> short 'f'
-            <> help "Specify's the input file with the pattern"
-            <> metavar "FILE")
+fileInput =
+  File
+    <$> strOption
+      ( long "input"
+          <> short 'f'
+          <> help "Specify's the input file with the pattern"
+          <> metavar "FILE"
+      )
 
 patternInput :: Parser Input
-patternInput = Pattern <$> option patternReader
-                 ( long "pattern"
-                <> short 'p'
-                <> help "Specify's the pattern"
-                <> metavar "PATTERN")
+patternInput =
+  Pattern
+    <$> option
+      patternReader
+      ( long "pattern"
+          <> short 'p'
+          <> help "Specify's the pattern"
+          <> metavar "PATTERN"
+      )
 
 encodeInput :: Parser Input
-encodeInput = Encode <$> option strListReader
-                 ( long "encode"
-                <> short 'e'
-                <> help "Encode a message in binary"
-                <> metavar "STRING")
+encodeInput =
+  Encode
+    <$> option
+      strListReader
+      ( long "encode"
+          <> short 'e'
+          <> help "Encode a message in binary"
+          <> metavar "STRING"
+      )
 
 input :: Parser Input
 input = fileInput <|> patternInput <|> encodeInput
 
 patternReader :: ReadM [[Int]]
 patternReader = do
-    o <- str
-    return (read o :: [[Int]])
+  o <- str
+  return (read o :: [[Int]])
 
 strListReader :: ReadM [String]
 strListReader = do
-    o <- str
-    return (read o :: [String])
+  o <- str
+  return (read o :: [String])
 
 options :: Parser Options
 options =
@@ -159,7 +172,8 @@ options =
           <> metavar "FILE"
           <> value "out.png"
       )
-    <*> option auto
+    <*> option
+      auto
       ( long "size"
           <> short 's'
           <> help "The size of the lines (3,4 or 5)"
@@ -174,25 +188,32 @@ options =
     <*> input
 
 opts :: ParserInfo Options
-opts = info (options <**> helper) (
-  fullDesc
-  <> progDesc "Make various patterns and even encode messages!"
-  <> header "Hitomezashi Maker"
-  <> footerDoc (Just (L.text "Hitomezashi Pattern Format:\n\
-  \----------------------------\n\
-  \Patterns are made with a series of alternating lines starting from the left and top,\n\
-  \and are represented by 1 and 0. 1 starts with a line, whereas 0 dosen't.\n\n\
-  \  eg. 1: |─ ─ ─ ─ ─|\n\
-  \      0: | ─ ─ ─ ─ |\n\n\
-  \To make a pattern, put a series of these into [], one for the left and one for the top\n\n\
-  \eg. [[1,0,1,0,1],[1,0,1,0,1]]  ( [[left pattern],[top pattern]] )\n\n\
-  \You can put this in a file and specify it with the -f option, or use it directly with the -H option\
-  \or even encode a message with -e option ( [msgLeft,msgTop] ).\n\n\
-  \Whatever it is you do, dont forget to have fun!\n"
-  )))
+opts =
+  info
+    (options <**> helper)
+    ( fullDesc
+        <> progDesc "Make various patterns and even encode messages!"
+        <> header "Hitomezashi Maker"
+        <> footerDoc
+          ( Just
+              ( L.text
+                  "Hitomezashi Pattern Format:\n\
+                  \----------------------------\n\
+                  \Patterns are made with a series of alternating lines starting from the left and top,\n\
+                  \and are represented by 1 and 0. 1 starts with a line, whereas 0 dosen't.\n\n\
+                  \  eg. 1: |─ ─ ─ ─ ─|\n\
+                  \      0: | ─ ─ ─ ─ |\n\n\
+                  \To make a pattern, put a series of these into [], one for the left and one for the top\n\n\
+                  \eg. [[1,0,1,0,1],[1,0,1,0,1]]  ( [[left pattern],[top pattern]] )\n\n\
+                  \You can put this in a file and specify it with the -f option, or use it directly with the -H option\
+                  \or even encode a message with -e option ( [msgLeft,msgTop] ).\n\n\
+                  \Whatever it is you do, dont forget to have fun!\n"
+              )
+          )
+    )
 
 writeHitomezashiWrapper :: Options -> IO ()
-writeHitomezashiWrapper Options{ .. }
+writeHitomezashiWrapper Options {..}
   | show (toConstr optInput) == "Pattern" = writeHitomezashi optOutput optSize (inv $ getPatVal optInput)
   | show (toConstr optInput) == "Encode" = writeHitomezashi optOutput optSize (inv . toBinary $ getEncVal optInput)
   | show (toConstr optInput) == "File" = list >>= writeHitomezashi optOutput optSize . inv
